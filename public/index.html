@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simulador de Processador Virtual</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        padding: 1rem;
+        background: #f0f0f0;
+      }
+      button {
+        margin: 0.5rem;
+        padding: 0.5rem 1rem;
+      }
+      textarea,
+      pre {
+        width: 100%;
+        min-height: 100px;
+        margin-top: 0.5rem;
+        font-family: monospace;
+      }
+      .grid {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      .block {
+        background: white;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        flex: 1;
+        min-width: 300px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Simulador de Processador Virtual</h1>
+
+    <div>
+      <button id="executar">Executar</button>
+      <button id="passo">Passo a passo</button>
+    </div>
+
+    <div class="grid">
+      <div class="block">
+        <h2>Programa (Mnêmico)</h2>
+        <textarea
+          id="programa"
+          placeholder="LOAD R0, 5&#10;ADD R0, R1&#10;OUT R0"
+        ></textarea>
+      </div>
+
+      <div class="block">
+        <h2>Entrada</h2>
+        <input
+          id="entrada"
+          type="text"
+          placeholder="Digite os dados de entrada..."
+          style="width: 100%; font-family: monospace"
+        />
+      </div>
+
+      <div class="block">
+        <h2>Registradores</h2>
+        <pre id="registradores"></pre>
+      </div>
+
+      <div class="block">
+        <h2>Memória</h2>
+        <pre id="memoria"></pre>
+      </div>
+
+      <div class="block">
+        <h2>Saída</h2>
+        <pre id="saida"></pre>
+      </div>
+    </div>
+
+    <script type="module" src="../dist/index.js"></script>
+  </body>
+</html>
