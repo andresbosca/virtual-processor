@@ -12,8 +12,9 @@ export class CPU {
   carregarPrograma(texto: string) {
     const linhas = texto
       .split('\n')
-      .map((l) => l.trim())
+      .map((l) => l.trim().split(';')[0].trim()) // remove comentários
       .filter((l) => l);
+    console.log(linhas);
     this.rom = linhas.map((l) => parseInt(l, 16));
     this.pc = 0;
     this.sp = 255;
@@ -30,105 +31,67 @@ export class CPU {
   }
 
   executarProximo(): boolean {
-    if (this.pc >= this.rom.length) return true;
-
     const opcode = this.rom[this.pc++];
+    const op = (opcode & 0xf0) >> 4;
+    const x = (opcode & 0x0c) >> 2;
+    const y = opcode & 0x03;
 
-    if (opcode === 0xff) {
-      return true; // HLT
-    }
-
-    if (opcode === 0x15) {
-      // RET
-      this.pc = this.pilha[this.sp++];
-      return false;
-    }
-
-    const highNibble = (opcode & 0xf0) >> 4;
-    const lowNibble = opcode & 0x0f;
-    const X = (opcode & 0x0c) >> 2;
-    const Y = opcode & 0x03;
-
-    console.log(highNibble);
-
-    switch (highNibble) {
-      case 0x0: // MOV Rx, Ry (00XY)
-        this.registradores[X] = this.registradores[Y];
+    console.log({ opcode, op1: 0xff, op2: 0x15, op });
+    switch (opcode) {
+      case 0xff:
+        return true; // HLT
+      case 0x15:
+        this.pc = this.pilha[this.sp++];
         break;
-
-      case 0x1: // LOAD Rx, n (01Xn)
-        const n1 = this.rom[this.pc++];
-        this.registradores[X] = n1;
-        break;
-
-      case 0x2: // ADD Rx, Ry (02XY)
-        this.registradores[X] += this.registradores[Y];
-        break;
-
-      case 0x3: // SUB Rx, Ry (03XY)
-        this.registradores[X] -= this.registradores[Y];
-        break;
-
-      case 0x4: // MUL Rx, Ry (04XY)
-        this.registradores[X] *= this.registradores[Y];
-        break;
-
-      case 0x5: // DIV Rx, Ry (05XY)
-        const divisor = this.registradores[Y];
-        this.registradores[X] =
-          divisor !== 0 ? Math.trunc(this.registradores[X] / divisor) : 0;
-        break;
-
-      case 0x6: // JMP a (06Xa)
-        const addrJMP = this.rom[this.pc++];
-        this.pc = addrJMP;
-        break;
-
-      case 0x7: // JZ Rx, n (07Xn)
-        const addrJZ = this.rom[this.pc++];
-        if (this.registradores[X] === 0) this.pc = addrJZ;
-        break;
-
-      case 0x8: // JN Rx, n (08Xn)
-        const addrJN = this.rom[this.pc++];
-        if (this.registradores[X] < 0) this.pc = addrJN;
-        break;
-
-      case 0x9: // JP Rx, n (09Xn)
-        const addrJP = this.rom[this.pc++];
-        if (this.registradores[X] > 0) this.pc = addrJP;
-        break;
-
-      case 0xa: // IN Rx (10Xx)
-        const inputChar = this.entrada.shift() ?? '\0';
-        this.registradores[X] = inputChar.charCodeAt(0);
-        break;
-
-      case 0xb: // OUT Rx (11Xx)
-        this.saida.push(String.fromCharCode(this.registradores[X]));
-        break;
-
-      case 0xc: // LOADM Rx, [a] (12Xa)
-        const addrLoad = this.rom[this.pc++];
-        this.registradores[X] = this.memoria[addrLoad];
-        break;
-
-      case 0xd: // STOREM [a], Rx (13aX)
-        const addrStore = this.rom[this.pc++];
-        this.memoria[addrStore] = this.registradores[X];
-        break;
-
-      case 0xe: // CALL ab (14ab)
-        const addrCall = this.rom[this.pc++];
-        this.pilha[--this.sp] = this.pc;
-        this.pc = addrCall;
-        break;
-
       default:
-        console.warn(
-          `Opcode desconhecido: ${opcode.toString(16).padStart(2, '0').toUpperCase()}`,
-        );
-        break;
+        console.log(opcode);
+        const instr = opcode.toString(16).padStart(2, '0').toUpperCase();
+        if (instr.startsWith('00')) {
+          // MOV Rx, Ry
+          this.registradores[x] = this.registradores[y];
+        } else if (instr.startsWith('01')) {
+          const n = this.rom[this.pc++];
+          this.registradores[x] = n;
+        } else if (instr.startsWith('02')) {
+          this.registradores[x] += this.registradores[y];
+        } else if (instr.startsWith('03')) {
+          this.registradores[x] -= this.registradores[y];
+        } else if (instr.startsWith('04')) {
+          this.registradores[x] *= this.registradores[y];
+        } else if (instr.startsWith('05')) {
+          this.registradores[x] = Math.trunc(
+            this.registradores[x] / this.registradores[y],
+          );
+        } else if (instr.startsWith('06')) {
+          const addr = this.rom[this.pc++];
+          this.pc = addr;
+        } else if (instr.startsWith('07')) {
+          const addr = this.rom[this.pc++];
+          if (this.registradores[x] === 0) this.pc = addr;
+        } else if (instr.startsWith('08')) {
+          const addr = this.rom[this.pc++];
+          if (this.registradores[x] < 0) this.pc = addr;
+        } else if (instr.startsWith('09')) {
+          const addr = this.rom[this.pc++];
+          if (this.registradores[x] > 0) this.pc = addr;
+        } else if (instr.startsWith('10')) {
+          const char = this.entrada.shift() ?? '\0';
+          this.registradores[x] = char.charCodeAt(0);
+        } else if (instr.startsWith('11')) {
+          this.saida.push(String.fromCharCode(this.registradores[x]));
+        } else if (instr.startsWith('12')) {
+          const addr = this.rom[this.pc++];
+          this.registradores[x] = this.memoria[addr];
+        } else if (instr.startsWith('13')) {
+          const addr = this.rom[this.pc++];
+          this.memoria[addr] = this.registradores[x];
+        } else if (instr.startsWith('14')) {
+          const addr = this.rom[this.pc++];
+          this.pilha[--this.sp] = this.pc;
+          this.pc = addr;
+        } else {
+          console.warn(`Opcode desconhecido: ${instr}`);
+        }
     }
 
     return false;
