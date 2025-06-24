@@ -5,77 +5,542 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Simulador de Processador Virtual</title>
     <style>
+      * {
+        box-sizing: border-box;
+      }
+
       body {
-        font-family: sans-serif;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
         padding: 1rem;
-        background: #f0f0f0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        color: #333;
       }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        text-align: center;
+        color: white;
+        margin-bottom: 2rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      .controls {
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+
       button {
-        margin: 0.5rem;
-        padding: 0.5rem 1rem;
+        background: #4caf50;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        margin: 0 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
       }
+
+      button:hover {
+        background: #45a049;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      #passo {
+        background: #2196f3;
+      }
+
+      #passo:hover {
+        background: #1976d2;
+      }
+
+      #reset {
+        background: #f44336;
+      }
+
+      #reset:hover {
+        background: #d32f2f;
+      }
+
+      #limpar-saida {
+        background: #ff9800;
+      }
+
+      #limpar-saida:hover {
+        background: #f57c00;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+      }
+
+      .block {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .block h2 {
+        margin-top: 0;
+        margin-bottom: 1rem;
+        color: #333;
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 0.5rem;
+        font-size: 1.2rem;
+      }
+
       textarea,
       pre {
         width: 100%;
-        min-height: 100px;
+        min-height: 200px;
         margin-top: 0.5rem;
-        font-family: monospace;
+        font-family: 'Courier New', Consolas, monospace;
+        font-size: 14px;
+        border: 2px solid #ddd;
+        border-radius: 6px;
+        padding: 12px;
+        background: #f8f9fa;
+        resize: vertical;
       }
-      .grid {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
+
+      textarea {
+        min-height: 300px;
       }
-      .block {
-        background: white;
+
+      textarea:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+
+      #memoria {
+        max-height: 400px;
+        overflow-y: auto;
+        overflow-x: auto;
+        white-space: pre;
+        font-size: 12px;
+        line-height: 1.2;
+        border: 2px solid #ddd;
+        border-radius: 6px;
+        padding: 12px;
+        background: #1e1e1e;
+        color: #d4d4d4;
+      }
+
+      /* Destacar a linha atual */
+      #memoria .current-line {
+        background-color: #264f78;
+        color: #ffffff;
+      }
+
+      /* Scrollbar personalizada */
+      #memoria::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      #memoria::-webkit-scrollbar-track {
+        background: #2d2d2d;
+        border-radius: 4px;
+      }
+
+      #memoria::-webkit-scrollbar-thumb {
+        background: #666;
+        border-radius: 4px;
+      }
+
+      #memoria::-webkit-scrollbar-thumb:hover {
+        background: #888;
+      }
+
+      pre {
+        overflow-x: auto;
+        white-space: pre-wrap;
+        background: #1e1e1e;
+        color: #d4d4d4;
+        border: none;
+        line-height: 1.4;
+      }
+
+      input[type='text'] {
+        width: 100%;
+        padding: 12px;
+        font-family: 'Courier New', Consolas, monospace;
+        font-size: 14px;
+        border: 2px solid #ddd;
+        border-radius: 6px;
+        background: #f8f9fa;
+      }
+
+      input[type='text']:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+
+      .status-bar {
+        background: rgba(255, 255, 255, 0.9);
         padding: 1rem;
-        border-radius: 0.5rem;
-        box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-        flex: 1;
-        min-width: 300px;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+
+      .status-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #ccc;
+      }
+
+      .status-indicator.running {
+        background: #4caf50;
+        animation: pulse 1s infinite;
+      }
+
+      .status-indicator.stopped {
+        background: #f44336;
+      }
+
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .opcodes-table {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      }
+
+      .opcodes-table h2 {
+        margin-top: 0;
+        color: #333;
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 0.5rem;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: 'Courier New', Consolas, monospace;
+        font-size: 12px;
+      }
+
+      th,
+      td {
+        padding: 8px 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+
+      th {
+        background: #f8f9fa;
+        font-weight: bold;
+        color: #333;
+      }
+
+      tr:hover {
+        background: #f5f5f5;
+      }
+
+      .error-message {
+        background: #ffebee;
+        color: #c62828;
+        padding: 1rem;
+        border-radius: 6px;
+        border-left: 4px solid #f44336;
+        margin: 1rem 0;
+        display: none;
+      }
+
+      .success-message {
+        background: #e8f5e8;
+        color: #2e7d32;
+        padding: 1rem;
+        border-radius: 6px;
+        border-left: 4px solid #4caf50;
+        margin: 1rem 0;
+        display: none;
+      }
+
+      @media (max-width: 768px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .status-bar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        button {
+          margin: 4px;
+          padding: 10px 16px;
+          font-size: 14px;
+        }
       }
     </style>
   </head>
   <body>
-    <h1>Simulador de Processador Virtual</h1>
+    <div class="container">
+      <h1>🖥️ Simulador de Processador Virtual</h1>
 
-    <div>
-      <button id="executar">Executar</button>
-      <button id="passo">Passo a passo</button>
-    </div>
-
-    <div class="grid">
-      <div class="block">
-        <h2>Programa (Mnêmico)</h2>
-        <textarea
-          id="programa"
-          placeholder="LOAD R0, 5&#10;ADD R0, R1&#10;OUT R0"
-        ></textarea>
+      <div class="status-bar">
+        <div class="status-item">
+          <div class="status-indicator" id="status-indicator"></div>
+          <span id="status-text">Parado</span>
+        </div>
+        <div class="status-item">
+          <strong>PC:</strong> <span id="pc-display">0</span>
+        </div>
+        <div class="status-item">
+          <strong>Instruções:</strong> <span id="instruction-count">0</span>
+        </div>
+        <div class="status-item">
+          <strong>Ciclos:</strong> <span id="cycle-count">0</span>
+        </div>
       </div>
 
-      <div class="block">
-        <h2>Entrada</h2>
-        <input
-          id="entrada"
-          type="text"
-          placeholder="Digite os dados de entrada..."
-          style="width: 100%; font-family: monospace"
-        />
+      <div class="controls">
+        <button id="executar">▶️ Executar</button>
+        <button id="passo">👣 Passo a Passo</button>
+        <button id="reset">🔄 Reset</button>
+        <button id="limpar-saida">🗑️ Limpar Saída</button>
       </div>
 
-      <div class="block">
-        <h2>Registradores</h2>
-        <pre id="registradores"></pre>
+      <div class="error-message" id="error-message"></div>
+      <div class="success-message" id="success-message"></div>
+
+      <div class="grid">
+        <div class="block">
+          <h2>📝 Programa (Assembly)</h2>
+          <textarea
+            id="programa"
+            placeholder="; Exemplo: Solicitar número e mostrar o dobro&#10;LOAD R0, 73    ; 'I'&#10;OUT R0&#10;IN R1          ; Lê número&#10;LOAD R2, 2     ; Carrega 2&#10;MUL R1, R2     ; R1 = R1 * 2&#10;OUT R1         ; Mostra resultado&#10;HLT            ; Para programa"
+          ></textarea>
+          <div style="margin-top: 0.5rem; font-size: 12px; color: #666">
+            <strong>Dica:</strong> Use ; para comentários. Suporte a labels
+            (nome:)
+          </div>
+        </div>
+
+        <div class="block">
+          <h2>⌨️ Entrada</h2>
+          <input
+            id="entrada"
+            type="text"
+            placeholder="Digite os dados de entrada (caracteres)..."
+          />
+          <div style="margin-top: 0.5rem; font-size: 12px; color: #666">
+            <strong>Formato:</strong> Cada caractere será lido individualmente
+            pelo comando IN
+          </div>
+        </div>
+
+        <div class="block">
+          <h2>🔢 Registradores & Estado</h2>
+          <pre id="registradores"></pre>
+        </div>
+
+        <div class="block">
+          <h2>💾 Memória (ROM)</h2>
+          <div style="margin-bottom: 0.5rem">
+            <button id="scroll-to-pc" style="font-size: 12px; padding: 4px 8px">
+              📍 Ir para PC
+            </button>
+            <button
+              id="scroll-to-top"
+              style="font-size: 12px; padding: 4px 8px"
+            >
+              ⬆️ Início
+            </button>
+          </div>
+          <pre id="memoria"></pre>
+        </div>
+
+        <div class="block">
+          <h2>📺 Saída</h2>
+          <pre id="saida"></pre>
+        </div>
+
+        <div class="block">
+          <h2>🔧 Código de Máquina</h2>
+          <pre id="codigo-maquina"></pre>
+        </div>
       </div>
 
-      <div class="block">
-        <h2>Memória</h2>
-        <pre id="memoria"></pre>
-      </div>
-
-      <div class="block">
-        <h2>Saída</h2>
-        <pre id="saida"></pre>
+      <div class="opcodes-table">
+        <h2>📋 Tabela de OPCODES</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Opcode</th>
+              <th>Mnômico</th>
+              <th>Descrição</th>
+              <th>Parâmetros</th>
+              <th>Registradores Afetados</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>00XY</td>
+              <td>MOV Rx, Ry</td>
+              <td>Copia Ry para Rx</td>
+              <td>Rx, Ry</td>
+              <td>Rx</td>
+            </tr>
+            <tr>
+              <td>01Xn</td>
+              <td>LOAD Rx, n</td>
+              <td>Carrega valor n em Rx</td>
+              <td>Rx, n</td>
+              <td>Rx, Flags</td>
+            </tr>
+            <tr>
+              <td>02XY</td>
+              <td>ADD Rx, Ry</td>
+              <td>Rx ← Rx + Ry</td>
+              <td>Rx, Ry</td>
+              <td>Rx, Flags</td>
+            </tr>
+            <tr>
+              <td>03XY</td>
+              <td>SUB Rx, Ry</td>
+              <td>Rx ← Rx - Ry</td>
+              <td>Rx, Ry</td>
+              <td>Rx, Flags</td>
+            </tr>
+            <tr>
+              <td>04XY</td>
+              <td>MUL Rx, Ry</td>
+              <td>Rx ← Rx * Ry</td>
+              <td>Rx, Ry</td>
+              <td>Rx, Flags</td>
+            </tr>
+            <tr>
+              <td>05XY</td>
+              <td>DIV Rx, Ry</td>
+              <td>Rx ← Rx / Ry</td>
+              <td>Rx, Ry</td>
+              <td>Rx, Flags</td>
+            </tr>
+            <tr>
+              <td>06Xa</td>
+              <td>JMP a</td>
+              <td>Salta para endereço a</td>
+              <td>a</td>
+              <td>PC</td>
+            </tr>
+            <tr>
+              <td>07Xn</td>
+              <td>JZ Rx, n</td>
+              <td>Salta se Rx == 0</td>
+              <td>Rx, n</td>
+              <td>PC</td>
+            </tr>
+            <tr>
+              <td>08Xn</td>
+              <td>JN Rx, n</td>
+              <td>Salta se Rx < 0</td>
+              <td>Rx, n</td>
+              <td>PC</td>
+            </tr>
+            <tr>
+              <td>09Xn</td>
+              <td>JP Rx, n</td>
+              <td>Salta se Rx > 0</td>
+              <td>Rx, n</td>
+              <td>PC</td>
+            </tr>
+            <tr>
+              <td>10Xx</td>
+              <td>IN Rx</td>
+              <td>Lê caractere para Rx</td>
+              <td>Rx</td>
+              <td>Rx</td>
+            </tr>
+            <tr>
+              <td>11Xx</td>
+              <td>OUT Rx</td>
+              <td>Imprime caractere de Rx</td>
+              <td>Rx</td>
+              <td>-</td>
+            </tr>
+            <tr>
+              <td>12Xa</td>
+              <td>LOADM Rx, [a]</td>
+              <td>Carrega da memória</td>
+              <td>Rx, a</td>
+              <td>Rx</td>
+            </tr>
+            <tr>
+              <td>13aX</td>
+              <td>STOREM [a], Rx</td>
+              <td>Salva na memória</td>
+              <td>a, Rx</td>
+              <td>-</td>
+            </tr>
+            <tr>
+              <td>14ab</td>
+              <td>CALL ab</td>
+              <td>Chama sub-rotina</td>
+              <td>ab</td>
+              <td>PC, SP</td>
+            </tr>
+            <tr>
+              <td>15</td>
+              <td>RET</td>
+              <td>Retorna de sub-rotina</td>
+              <td>-</td>
+              <td>PC, SP</td>
+            </tr>
+            <tr>
+              <td>FF</td>
+              <td>HLT</td>
+              <td>Para o programa</td>
+              <td>-</td>
+              <td>-</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
