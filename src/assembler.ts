@@ -1,22 +1,22 @@
 export class Assembler {
   private static readonly OPCODES: { [key: string]: number } = {
-    MOV: 0x00,
-    LOAD: 0x01,
-    ADD: 0x02,
-    SUB: 0x03,
-    MUL: 0x04,
-    DIV: 0x05,
-    JMP: 0x06,
-    JZ: 0x07,
-    JN: 0x08,
-    JP: 0x09,
-    IN: 0x10,
-    OUT: 0x11,
-    LOADM: 0x12,
-    STOREM: 0x13,
-    CALL: 0x14,
-    RET: 0x15,
-    HLT: 0xff,
+    MOV: 0x0, // 0000
+    LOAD: 0x1, // 0001
+    ADD: 0x2, // 0010
+    SUB: 0x3, // 0011
+    MUL: 0x4, // 0100
+    DIV: 0x5, // 0101
+    JMP: 0x6, // 0110
+    JZ: 0x7, // 0111
+    JN: 0x8, // 1000
+    JP: 0x9, // 1001
+    IN: 0xa, // 1010
+    OUT: 0xb, // 1011
+    LOADM: 0xc, // 1100
+    STOREM: 0xd, // 1101
+    CALL: 0xe, // 1110
+    RET: 0xf0, // 11110000
+    HLT: 0xff, // 11111111
   };
 
   private static parseRegister(reg: string): number {
@@ -35,13 +35,22 @@ export class Assembler {
   }
 
   private static parseMemoryAddress(addr: string): number {
-    // Remove brackets [addr] -> addr
     const cleaned = addr.replace(/[\[\]]/g, '');
     return this.parseNumber(cleaned);
   }
 
+  private static parseValue(value: string): number {
+    if (value.startsWith("'") && value.endsWith("'") && value.length === 3) {
+      return value.charCodeAt(1);
+    }
+
+    if (value.startsWith('0x') || value.startsWith('0X')) {
+      return parseInt(value, 16);
+    }
+    return parseInt(value, 10);
+  }
+
   static assemble(program: string): number[] {
-    // Processa linha por linha removendo comentários
     const lines = program
       .split('\n')
       .map((line) => {
@@ -85,26 +94,18 @@ export class Assembler {
       const baseOpcode = this.OPCODES[instruction];
       let machineInstruction = 0;
 
-      console.log({
-        instruction,
-        baseOpcode,
-        parts,
-        labels,
-      });
-
       try {
         switch (instruction) {
-          case 'MOV': // 00XY - MOV Rx, Ry
+          case 'MOV': // 0XYZ - MOV Rx, Ry
             if (parts.length !== 3) {
               throw new Error(`MOV requires 2 operands: ${line}`);
             }
             const regX = this.parseRegister(parts[1]);
             const regY = this.parseRegister(parts[2]);
-            machineInstruction =
-              (((baseOpcode << 4) | regX) << 8) | (regY << 4);
+            machineInstruction = (baseOpcode << 12) | (regX << 8) | (regY << 4);
             break;
 
-          case 'LOAD': // 01Xn - LOAD Rx, n
+          case 'LOAD': // 1Xnn - LOAD Rx, n
             if (parts.length !== 3) {
               throw new Error(`LOAD requires 2 operands: ${line}`);
             }
@@ -114,23 +115,23 @@ export class Assembler {
                 ? labels[parts[2]]
                 : this.parseValue(parts[2]);
             machineInstruction =
-              (((baseOpcode << 4) | loadReg) << 8) | (value & 0xff);
+              (baseOpcode << 12) | (loadReg << 8) | (value & 0xff);
             break;
 
-          case 'ADD': // 02XY - ADD Rx, Ry
-          case 'SUB': // 03XY - SUB Rx, Ry
-          case 'MUL': // 04XY - MUL Rx, Ry
-          case 'DIV': // 05XY - DIV Rx, Ry
+          case 'ADD': // 2XYZ - ADD Rx, Ry
+          case 'SUB': // 3XYZ - SUB Rx, Ry
+          case 'MUL': // 4XYZ - MUL Rx, Ry
+          case 'DIV': // 5XYZ - DIV Rx, Ry
             if (parts.length !== 3) {
               throw new Error(`${instruction} requires 2 operands: ${line}`);
             }
             const arithRegX = this.parseRegister(parts[1]);
             const arithRegY = this.parseRegister(parts[2]);
             machineInstruction =
-              (((baseOpcode << 4) | arithRegX) << 8) | (arithRegY << 4);
+              (baseOpcode << 12) | (arithRegX << 8) | (arithRegY << 4);
             break;
 
-          case 'JMP': // 06Xa - JMP a
+          case 'JMP': // 6aaa - JMP a
             if (parts.length !== 2) {
               throw new Error(`JMP requires 1 operand: ${line}`);
             }
@@ -141,9 +142,9 @@ export class Assembler {
             machineInstruction = (baseOpcode << 12) | (jumpAddr & 0xfff);
             break;
 
-          case 'JZ': // 07Xn - JZ Rx, n
-          case 'JN': // 08Xn - JN Rx, n
-          case 'JP': // 09Xn - JP Rx, n
+          case 'JZ': // 7Xaa - JZ Rx, a
+          case 'JN': // 8Xaa - JN Rx, a
+          case 'JP': // 9Xaa - JP Rx, a
             if (parts.length !== 3) {
               throw new Error(`${instruction} requires 2 operands: ${line}`);
             }
@@ -153,36 +154,29 @@ export class Assembler {
                 ? labels[parts[2]]
                 : this.parseNumber(parts[2]);
             machineInstruction =
-              (((baseOpcode << 4) | condReg) << 8) | (condAddr & 0xff);
+              (baseOpcode << 12) | (condReg << 8) | (condAddr & 0xff);
             break;
 
-          case 'IN': // 10Xx - IN Rx
-          case 'OUT': // 11Xx - OUT Rx
+          case 'IN': // AX00 - IN Rx
+          case 'OUT': // BX00 - OUT Rx
             if (parts.length !== 2) {
               throw new Error(`${instruction} requires 1 operand: ${line}`);
             }
             const ioReg = this.parseRegister(parts[1]);
-            console.log({
-              text: `IO Register: ${ioReg}`,
-              value: ioReg,
-              baseOpcode,
-              instruction,
-            });
-
-            machineInstruction = (baseOpcode << 8) | (ioReg << 4);
+            machineInstruction = (baseOpcode << 12) | (ioReg << 8);
             break;
 
-          case 'LOADM': // 12Xa - LOADM Rx, [a]
+          case 'LOADM': // CXaa - LOADM Rx, [a]
             if (parts.length !== 3) {
               throw new Error(`LOADM requires 2 operands: ${line}`);
             }
             const loadmReg = this.parseRegister(parts[1]);
             const loadmAddr = this.parseMemoryAddress(parts[2]);
             machineInstruction =
-              (((baseOpcode << 4) | loadmReg) << 8) | (loadmAddr & 0xff);
+              (baseOpcode << 12) | (loadmReg << 8) | (loadmAddr & 0xff);
             break;
 
-          case 'STOREM': // 13aX - STOREM [a], Rx
+          case 'STOREM': // DaaX - STOREM [a], Rx
             if (parts.length !== 3) {
               throw new Error(`STOREM requires 2 operands: ${line}`);
             }
@@ -192,7 +186,7 @@ export class Assembler {
               (baseOpcode << 12) | ((storeAddr & 0xff) << 4) | storeReg;
             break;
 
-          case 'CALL': // 14ab - CALL ab
+          case 'CALL': // Eaaa - CALL a
             if (parts.length !== 2) {
               throw new Error(`CALL requires 1 operand: ${line}`);
             }
@@ -203,12 +197,12 @@ export class Assembler {
             machineInstruction = (baseOpcode << 12) | (callAddr & 0xfff);
             break;
 
-          case 'RET': // 15 - RET
-            machineInstruction = baseOpcode << 8;
+          case 'RET': // F000 - RET
+            machineInstruction = 0xf000;
             break;
 
-          case 'HLT': // FF - HLT
-            machineInstruction = baseOpcode << 8;
+          case 'HLT': // FF00 - HLT
+            machineInstruction = 0xff00;
             break;
 
           default:
@@ -216,9 +210,7 @@ export class Assembler {
         }
 
         machineCode.push(machineInstruction);
-        console.log(
-          `Assembled: ${line} -> 0x${machineInstruction.toString(16).padStart(4, '0').toUpperCase()}`,
-        );
+
       } catch (error: any) {
         throw new Error(`Error in line "${line}": ${error.message}`);
       }
@@ -227,96 +219,80 @@ export class Assembler {
     return machineCode;
   }
 
-  private static parseValue(value: string): number {
-    // Se é um caractere entre aspas simples: 'I', 'A', etc.
-    if (value.startsWith("'") && value.endsWith("'") && value.length === 3) {
-      return value.charCodeAt(1); // Retorna o código ASCII do caractere
-    }
-
-    // Se é um número (decimal ou hex), trata como código ASCII
-    let numValue: number;
-
-    if (value.startsWith('0x') || value.startsWith('0X')) {
-      numValue = parseInt(value, 16);
-    } else {
-      numValue = parseInt(value, 10);
-    }
-
-    // Sempre retorna o caractere correspondente ao código ASCII
-    return numValue; // O número já É o código ASCII
-  }
-
   static disassemble(machineCode: number[]): string {
     const result: string[] = [];
 
     for (let i = 0; i < machineCode.length; i++) {
       const instruction = machineCode[i];
-      const opcode = (instruction & 0xff00) >> 8;
-      const operand = instruction & 0x00ff;
+      const opcode = (instruction >> 12) & 0xf;
+      const fullOpcode = (instruction >> 8) & 0xff;
+      const regX = (instruction >> 8) & 0xf;
+      const regY = (instruction >> 4) & 0xf;
+      const immediate = instruction & 0xff;
+      const address = instruction & 0xfff;
 
       let line = `${i.toString().padStart(3, '0')}: 0x${instruction
         .toString(16)
         .padStart(4, '0')
         .toUpperCase()} `;
 
-      const baseOp = (opcode & 0xf0) >> 4;
-      const regX = opcode & 0x0f;
-      console.log({
-        instruction,
-        opcode,
-        operand,
-        baseOp,
-        regX,
-      });
-      switch (baseOp) {
+      switch (opcode) {
         case 0x0: // MOV
-          line += `MOV R${regX}, R${(operand & 0xf0) >> 4}`;
+          line += `MOV R${regX}, R${regY}`;
           break;
         case 0x1: // LOAD
-          line += `LOAD R${regX}, ${operand}`;
+          line += `LOAD R${regX}, ${immediate}`;
           break;
         case 0x2: // ADD
-          line += `ADD R${regX}, R${(operand & 0xf0) >> 4}`;
+          line += `ADD R${regX}, R${regY}`;
           break;
         case 0x3: // SUB
-          line += `SUB R${regX}, R${(operand & 0xf0) >> 4}`;
+          line += `SUB R${regX}, R${regY}`;
           break;
         case 0x4: // MUL
-          line += `MUL R${regX}, R${(operand & 0xf0) >> 4}`;
+          line += `MUL R${regX}, R${regY}`;
           break;
         case 0x5: // DIV
-          line += `DIV R${regX}, R${(operand & 0xf0) >> 4}`;
+          line += `DIV R${regX}, R${regY}`;
           break;
         case 0x6: // JMP
-          line += `JMP ${instruction & 0x0fff}`;
+          line += `JMP ${address}`;
           break;
         case 0x7: // JZ
-          line += `JZ R${regX}, ${operand}`;
+          line += `JZ R${regX}, ${immediate}`;
           break;
         case 0x8: // JN
-          line += `JN R${regX}, ${operand}`;
+          line += `JN R${regX}, ${immediate}`;
           break;
         case 0x9: // JP
-          line += `JP R${regX}, ${operand}`;
+          line += `JP R${regX}, ${immediate}`;
           break;
-        default:
-          if (opcode === 0x10) {
-            line += `IN R${(operand & 0xf0) >> 4}`;
-          } else if (opcode === 0x11) {
-            line += `OUT R${(operand & 0xf0) >> 4}`;
-          } else if ((opcode & 0xf0) === 0x10 && (opcode & 0x0f) === 0x02) {
-            line += `LOADM R${regX}, [${operand}]`;
-          } else if ((opcode & 0xf0) === 0x10 && (opcode & 0x0f) === 0x03) {
-            line += `STOREM [${(operand & 0xf0) >> 4}], R${operand & 0x0f}`;
-          } else if ((opcode & 0xf0) === 0x10 && (opcode & 0x0f) === 0x04) {
-            line += `CALL ${instruction & 0x0fff}`;
-          } else if (opcode === 0x15) {
+        case 0xa: // IN
+          line += `IN R${regX}`;
+          break;
+        case 0xb: // OUT
+          line += `OUT R${regX}`;
+          break;
+        case 0xc: // LOADM
+          line += `LOADM R${regX}, [${immediate}]`;
+          break;
+        case 0xd: // STOREM
+          line += `STOREM [${regY}], R${instruction & 0xf}`;
+          break;
+        case 0xe: // CALL
+          line += `CALL ${address}`;
+          break;
+        case 0xf: // RET ou HLT
+          if (fullOpcode === 0xf0) {
             line += `RET`;
-          } else if (opcode === 0xff) {
+          } else if (fullOpcode === 0xff) {
             line += `HLT`;
           } else {
-            line += `UNKNOWN`;
+            line += `UNKNOWN F-type`;
           }
+          break;
+        default:
+          line += `UNKNOWN`;
       }
 
       result.push(line);

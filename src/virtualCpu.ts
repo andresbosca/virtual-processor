@@ -37,7 +37,6 @@ export class VirtualCPU {
     this.reset();
   }
 
-  // Reset CPU to initial state
   reset(): void {
     this.registers.fill(0);
     this.pc = 0;
@@ -54,7 +53,6 @@ export class VirtualCPU {
     this.outputBuffer = [];
   }
 
-  // Load program into ROM (first 32KB)
   loadProgram(program: number[]): void {
     if (program.length > VirtualCPU.ROM_SIZE) {
       throw new Error('Program too large for ROM');
@@ -64,22 +62,18 @@ export class VirtualCPU {
     }
   }
 
-  // Set input for the CPU
   setInput(input: string): void {
-    this.inputBuffer = input.split('');
+    this.inputBuffer = input.split(' ');
   }
 
-  // Get output from CPU
   getOutput(): string {
     return this.outputBuffer.join('');
   }
 
-  // Clear output buffer
   clearOutput(): void {
     this.outputBuffer = [];
   }
 
-  // Get current CPU state
   getState(): CPUState {
     return {
       registers: [...this.registers],
@@ -93,14 +87,12 @@ export class VirtualCPU {
     };
   }
 
-  // Update flags based on result
   private updateFlags(result: number): void {
     this.flags.zero = result === 0;
     this.flags.negative = result < 0;
     this.flags.overflow = result > 0x7fffffff || result < -0x80000000;
   }
 
-  // Fetch next instruction
   private fetch(): number {
     if (this.pc >= VirtualCPU.MEMORY_SIZE) {
       throw new Error('Program Counter out of bounds');
@@ -108,86 +100,88 @@ export class VirtualCPU {
     return this.memory[this.pc++];
   }
 
-  // Execute single instruction
   executeStep(): boolean {
     if (!this.running) {
       this.running = true;
     }
 
     const instruction = this.fetch();
-    const opcode = (instruction & 0xff00) >> 8;
-    const operand = instruction & 0x00ff;
+    const opcode = (instruction >> 12) & 0xf;
+    const fullOpcode = (instruction >> 8) & 0xff;
+    const regX = (instruction >> 8) & 0xf;
+    const regY = (instruction >> 4) & 0xf;
+    const immediate = instruction & 0xff;
+    const address = instruction & 0xfff;
 
-    switch (
-      opcode & 0xf0 // Usar apenas os 4 bits superiores
-    ) {
-      case 0x00: // MOV Rx, Ry
-        this.executeMov(opcode & 0x0f, (operand & 0xf0) >> 4, operand & 0x0f);
+    switch (opcode) {
+      case 0x0: // MOV Rx, Ry
+        this.executeMov(regX, regY);
         break;
-      case 0x10: // LOAD Rx, n
-        this.executeLoad(opcode & 0x0f, operand);
+      case 0x1: // LOAD Rx, n
+        this.executeLoad(regX, immediate);
         break;
-      case 0x20: // ADD Rx, Ry
-        this.executeAdd(opcode & 0x0f, (operand & 0xf0) >> 4, operand & 0x0f);
+      case 0x2: // ADD Rx, Ry
+        this.executeAdd(regX, regY);
         break;
-      case 0x30: // SUB Rx, Ry
-        this.executeSub(opcode & 0x0f, (operand & 0xf0) >> 4, operand & 0x0f);
+      case 0x3: // SUB Rx, Ry
+        this.executeSub(regX, regY);
         break;
-      case 0x40: // MUL Rx, Ry
-        this.executeMul(opcode & 0x0f, (operand & 0xf0) >> 4, operand & 0x0f);
+      case 0x4: // MUL Rx, Ry
+        this.executeMul(regX, regY);
         break;
-      case 0x50: // DIV Rx, Ry
-        this.executeDiv(opcode & 0x0f, (operand & 0xf0) >> 4, operand & 0x0f);
+      case 0x5: // DIV Rx, Ry
+        this.executeDiv(regX, regY);
         break;
-      case 0x60: // JMP a
-        this.executeJmp(operand);
+      case 0x6: // JMP a
+        this.executeJmp(address);
         break;
-      case 0x70: // JZ Rx, n
-        this.executeJz(opcode & 0x0f, operand);
+      case 0x7: // JZ Rx, n
+        this.executeJz(regX, immediate);
         break;
-      case 0x80: // JN Rx, n
-        this.executeJn(opcode & 0x0f, operand);
+      case 0x8: // JN Rx, n
+        this.executeJn(regX, immediate);
         break;
-      case 0x90: // JP Rx, n
-        this.executeJp(opcode & 0x0f, operand);
+      case 0x9: // JP Rx, n
+        this.executeJp(regX, immediate);
         break;
-      default:
-        // Instruções especiais
-        if (opcode === 0x10) {
-          // IN Rx (opcode 0x10)
-          this.executeIn(operand & 0x0f);
-        } else if (opcode === 0x11) {
-          // OUT Rx (opcode 0x11)
-          this.executeOut(operand & 0x0f);
-        } else if (opcode === 0x12) {
-          // LOADM Rx, [a]
-          this.executeLoadM(operand & 0x0f, (operand & 0xf0) >> 4);
-        } else if (opcode === 0x13) {
-          // STOREM [a], Rx
-          this.executeStoreM((operand & 0xf0) >> 4, operand & 0x0f);
-        } else if (opcode === 0x14) {
-          // CALL ab
-          this.executeCall(operand);
-        } else if (opcode === 0x15) {
-          // RET
+      case 0xa: // IN Rx
+        this.executeIn(regX);
+        break;
+      case 0xb: // OUT Rx
+        this.executeOut(regX);
+        break;
+      case 0xc: // LOADM Rx, [a]
+        this.executeLoadM(regX, immediate + VirtualCPU.ROM_SIZE);
+        break;
+      case 0xd: // STOREM [a], Rx
+        this.executeStoreM(regY + VirtualCPU.ROM_SIZE, instruction & 0xf);
+        break;
+      case 0xe: // CALL ab
+        this.executeCall(address);
+        break;
+      case 0xf: // RET ou HLT
+        if (fullOpcode === 0xf0) {
           this.executeRet();
-        } else if (opcode === 0xff) {
-          // HLT
+        } else if (fullOpcode === 0xff) {
           this.executeHlt();
           return false;
         } else {
-          throw new Error(`Unknown opcode: 0x${opcode.toString(16)}`);
+          throw new Error(
+            `Unknown F-type instruction: 0x${fullOpcode.toString(16)}`,
+          );
         }
+        break;
+      default:
+        throw new Error(`Unknown opcode: 0x${opcode.toString(16)}`);
     }
 
     return this.running;
   }
 
-  // Execute complete program
   run(): void {
     this.running = true;
     let steps = 0;
-    const maxSteps = 100000; // Prevent infinite loops
+    const maxSteps = 100000;
 
     while (this.running && steps < maxSteps) {
       if (!this.executeStep()) {
@@ -202,10 +196,11 @@ export class VirtualCPU {
   }
 
   // Instruction implementations
-  private executeMov(regX: number, regY: number, unused: number): void {
+  private executeMov(regX: number, regY: number): void {
     this.validateRegister(regX);
     this.validateRegister(regY);
     this.registers[regX] = this.registers[regY];
+    this.updateFlags(this.registers[regX]);
   }
 
   private executeLoad(regX: number, value: number): void {
@@ -214,31 +209,33 @@ export class VirtualCPU {
     this.updateFlags(value);
   }
 
-  private executeAdd(regX: number, regY: number, unused: number): void {
+  private executeAdd(regX: number, regY: number): void {
     this.validateRegister(regX);
     this.validateRegister(regY);
     const result = this.registers[regX] + this.registers[regY];
-    this.registers[regX] = result;
-    this.updateFlags(result);
+    this.flags.carry = result > 0xffff;
+    this.registers[regX] = result & 0xffff;
+    this.updateFlags(this.registers[regX]);
   }
 
-  private executeSub(regX: number, regY: number, unused: number): void {
+  private executeSub(regX: number, regY: number): void {
     this.validateRegister(regX);
     this.validateRegister(regY);
     const result = this.registers[regX] - this.registers[regY];
-    this.registers[regX] = result;
-    this.updateFlags(result);
+    this.registers[regX] = result < 0 ? 0 : result;
+    this.updateFlags(this.registers[regX]);
   }
 
-  private executeMul(regX: number, regY: number, unused: number): void {
+  private executeMul(regX: number, regY: number): void {
     this.validateRegister(regX);
     this.validateRegister(regY);
     const result = this.registers[regX] * this.registers[regY];
-    this.registers[regX] = result;
-    this.updateFlags(result);
+    this.flags.overflow = result > 0xffff;
+    this.registers[regX] = result & 0xffff;
+    this.updateFlags(this.registers[regX]);
   }
 
-  private executeDiv(regX: number, regY: number, unused: number): void {
+  private executeDiv(regX: number, regY: number): void {
     this.validateRegister(regX);
     this.validateRegister(regY);
     if (this.registers[regY] === 0) {
@@ -262,14 +259,14 @@ export class VirtualCPU {
 
   private executeJn(regX: number, address: number): void {
     this.validateRegister(regX);
-    if (this.registers[regX] < 0) {
+    if (this.registers[regX] < 0 || this.flags.negative) {
       this.pc = address;
     }
   }
 
   private executeJp(regX: number, address: number): void {
     this.validateRegister(regX);
-    if (this.registers[regX] > 0) {
+    if (this.registers[regX] > 0 && !this.flags.negative) {
       this.pc = address;
     }
   }
@@ -280,8 +277,9 @@ export class VirtualCPU {
       const char = this.inputBuffer.shift()!;
       this.registers[regX] = char.charCodeAt(0);
     } else {
-      this.registers[regX] = 0; // No input available
+      this.registers[regX] = 0;
     }
+    this.updateFlags(this.registers[regX]);
   }
 
   private executeOut(regX: number): void {
@@ -294,12 +292,16 @@ export class VirtualCPU {
     this.validateRegister(regX);
     this.validateMemoryAddress(address);
     this.registers[regX] = this.memory[address];
+    this.updateFlags(this.registers[regX]);
   }
 
   private executeStoreM(address: number, regX: number): void {
     this.validateRegister(regX);
     this.validateMemoryAddress(address);
     if (address < VirtualCPU.ROM_SIZE) {
+      console.log(
+        `Warning: Writing to ROM at address 0x${address.toString(16)}`,
+      );
       throw new Error('Cannot write to ROM');
     }
     this.memory[address] = this.registers[regX];
@@ -324,7 +326,6 @@ export class VirtualCPU {
     this.running = false;
   }
 
-  // Validation methods
   private validateRegister(reg: number): void {
     if (reg < 0 || reg > 3) {
       throw new Error(`Invalid register: R${reg}`);
@@ -332,12 +333,12 @@ export class VirtualCPU {
   }
 
   private validateMemoryAddress(address: number): void {
-    if (address < 0 || address >= VirtualCPU.MEMORY_SIZE) {
+    if (address < VirtualCPU.ROM_SIZE || address >= VirtualCPU.MEMORY_SIZE) {
       throw new Error(`Invalid memory address: 0x${address.toString(16)}`);
     }
   }
 
-  // Utility methods for debugging
+  // Utility methods
   getRegisters(): number[] {
     return [...this.registers];
   }

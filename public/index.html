@@ -421,126 +421,160 @@
           </thead>
           <tbody>
             <tr>
-              <td>00XY</td>
+              <td>0XY0</td>
               <td>MOV Rx, Ry</td>
               <td>Copia Ry para Rx</td>
               <td>Rx, Ry</td>
-              <td>Rx</td>
-            </tr>
-            <tr>
-              <td>01Xn</td>
-              <td>LOAD Rx, n</td>
-              <td>Carrega valor n em Rx</td>
-              <td>Rx, n</td>
               <td>Rx, Flags</td>
             </tr>
             <tr>
-              <td>02XY</td>
+              <td>1Xnn</td>
+              <td>LOAD Rx, n</td>
+              <td>Carrega valor n em Rx</td>
+              <td>Rx, n (0-255)</td>
+              <td>Rx, Flags</td>
+            </tr>
+            <tr>
+              <td>2XY0</td>
               <td>ADD Rx, Ry</td>
               <td>Rx ← Rx + Ry</td>
               <td>Rx, Ry</td>
-              <td>Rx, Flags</td>
+              <td>Rx, Flags (Zero, Carry, Overflow)</td>
             </tr>
             <tr>
-              <td>03XY</td>
+              <td>3XY0</td>
               <td>SUB Rx, Ry</td>
               <td>Rx ← Rx - Ry</td>
               <td>Rx, Ry</td>
-              <td>Rx, Flags</td>
+              <td>Rx, Flags (Zero, Negative)</td>
             </tr>
             <tr>
-              <td>04XY</td>
+              <td>4XY0</td>
               <td>MUL Rx, Ry</td>
               <td>Rx ← Rx * Ry</td>
               <td>Rx, Ry</td>
-              <td>Rx, Flags</td>
+              <td>Rx, Flags (Zero, Overflow)</td>
             </tr>
             <tr>
-              <td>05XY</td>
+              <td>5XY0</td>
               <td>DIV Rx, Ry</td>
-              <td>Rx ← Rx / Ry</td>
+              <td>Rx ← Rx / Ry (truncado)</td>
               <td>Rx, Ry</td>
+              <td>Rx, Flags (Zero, Negative)</td>
+            </tr>
+            <tr>
+              <td>6aaa</td>
+              <td>JMP a</td>
+              <td>Salta incondicionalmente para endereço a</td>
+              <td>a (0-4095)</td>
+              <td>PC</td>
+            </tr>
+            <tr>
+              <td>7Xaa</td>
+              <td>JZ Rx, a</td>
+              <td>Salta para a se Rx == 0</td>
+              <td>Rx, a (0-255)</td>
+              <td>PC (condicional)</td>
+            </tr>
+            <tr>
+              <td>8Xaa</td>
+              <td>JN Rx, a</td>
+              <td>Salta para a se Rx < 0</td>
+              <td>Rx, a (0-255)</td>
+              <td>PC (condicional)</td>
+            </tr>
+            <tr>
+              <td>9Xaa</td>
+              <td>JP Rx, a</td>
+              <td>Salta para a se Rx > 0</td>
+              <td>Rx, a (0-255)</td>
+              <td>PC (condicional)</td>
+            </tr>
+            <tr>
+              <td>AX00</td>
+              <td>IN Rx</td>
+              <td>Lê caractere da entrada para Rx</td>
+              <td>Rx</td>
               <td>Rx, Flags</td>
             </tr>
             <tr>
-              <td>06Xa</td>
-              <td>JMP a</td>
-              <td>Salta para endereço a</td>
-              <td>a</td>
-              <td>PC</td>
-            </tr>
-            <tr>
-              <td>07Xn</td>
-              <td>JZ Rx, n</td>
-              <td>Salta se Rx == 0</td>
-              <td>Rx, n</td>
-              <td>PC</td>
-            </tr>
-            <tr>
-              <td>08Xn</td>
-              <td>JN Rx, n</td>
-              <td>Salta se Rx < 0</td>
-              <td>Rx, n</td>
-              <td>PC</td>
-            </tr>
-            <tr>
-              <td>09Xn</td>
-              <td>JP Rx, n</td>
-              <td>Salta se Rx > 0</td>
-              <td>Rx, n</td>
-              <td>PC</td>
-            </tr>
-            <tr>
-              <td>10Xx</td>
-              <td>IN Rx</td>
-              <td>Lê caractere para Rx</td>
-              <td>Rx</td>
-              <td>Rx</td>
-            </tr>
-            <tr>
-              <td>11Xx</td>
+              <td>BX00</td>
               <td>OUT Rx</td>
-              <td>Imprime caractere de Rx</td>
+              <td>Imprime caractere contido em Rx</td>
               <td>Rx</td>
               <td>-</td>
             </tr>
             <tr>
-              <td>12Xa</td>
+              <td>CXaa</td>
               <td>LOADM Rx, [a]</td>
-              <td>Carrega da memória</td>
-              <td>Rx, a</td>
-              <td>Rx</td>
+              <td>Carrega valor da memória[a] para Rx</td>
+              <td>Rx, a (0-255)</td>
+              <td>Rx, Flags</td>
             </tr>
             <tr>
-              <td>13aX</td>
+              <td>DaaX</td>
               <td>STOREM [a], Rx</td>
-              <td>Salva na memória</td>
-              <td>a, Rx</td>
+              <td>Salva Rx na memória[a]</td>
+              <td>a (0-255), Rx</td>
               <td>-</td>
             </tr>
             <tr>
-              <td>14ab</td>
-              <td>CALL ab</td>
-              <td>Chama sub-rotina</td>
-              <td>ab</td>
-              <td>PC, SP</td>
+              <td>Eaaa</td>
+              <td>CALL a</td>
+              <td>Chama sub-rotina no endereço a</td>
+              <td>a (0-4095)</td>
+              <td>PC, SP, Stack</td>
             </tr>
             <tr>
-              <td>15</td>
+              <td>F000</td>
               <td>RET</td>
               <td>Retorna de sub-rotina</td>
               <td>-</td>
-              <td>PC, SP</td>
+              <td>PC, SP, Stack</td>
             </tr>
             <tr>
-              <td>FF</td>
+              <td>FF00</td>
               <td>HLT</td>
-              <td>Para o programa</td>
+              <td>Para a execução do programa</td>
               <td>-</td>
-              <td>-</td>
+              <td>Estado de execução</td>
             </tr>
           </tbody>
         </table>
+
+        <div class="opcodes-legend">
+          <h3>📝 Legenda:</h3>
+          <ul>
+            <li><strong>X, Y:</strong> Registradores (0-3) → R0, R1, R2, R3</li>
+            <li><strong>n:</strong> Valor imediato de 8 bits (0-255)</li>
+            <li><strong>nn:</strong> Valor imediato de 8 bits (0-255)</li>
+            <li><strong>a, aa:</strong> Endereço de 8 bits (0-255)</li>
+            <li><strong>aaa:</strong> Endereço de 12 bits (0-4095)</li>
+            <li><strong>0:</strong> Bits não utilizados (sempre 0)</li>
+          </ul>
+
+          <h3>🚩 Flags Afetadas:</h3>
+          <ul>
+            <li><strong>Zero:</strong> Resultado é zero</li>
+            <li><strong>Negative:</strong> Resultado é negativo</li>
+            <li><strong>Carry:</strong> Overflow em operações de adição</li>
+            <li>
+              <strong>Overflow:</strong> Resultado excede capacidade do
+              registrador
+            </li>
+          </ul>
+
+          <h3>💾 Limitações de Memória:</h3>
+          <ul>
+            <li>
+              <strong>ROM:</strong> 0x0000 - 0x7FFF (32KB) - Somente leitura
+            </li>
+            <li>
+              <strong>RAM:</strong> 0x8000 - 0xFFFF (32KB) - Leitura/Escrita
+            </li>
+            <li><strong>Stack:</strong> Cresce de 0xFFFE para baixo</li>
+          </ul>
+        </div>
       </div>
     </div>
 

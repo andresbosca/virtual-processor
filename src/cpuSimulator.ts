@@ -66,7 +66,8 @@ export class CPUSimulator {
   }
 
   private loadExampleProgram(): void {
-    const exampleProgram = `LOAD R0, 73
+    const exampleProgram = `
+LOAD R0, 73
 OUT R0
 HLT`;
 
@@ -84,9 +85,7 @@ HLT`;
       this.resetCPU();
       const program = this.programElement.value;
       const machineCode = Assembler.assemble(program);
-      console.log(
-        `Código de máquina gerado: ${machineCode.map((x) => x.toString(16).toUpperCase().padStart(4, '0')).join(' ')}`,
-      );
+
       this.cpu.loadProgram(machineCode);
       this.cpu.run();
       this.updateDisplay();
@@ -147,8 +146,8 @@ HLT`;
     const memory = this.cpu.getMemory(0, 256); // Mostra mais memória (256 bytes)
 
     let display = 'MEMÓRIA (ROM - Instruções carregadas):\n';
-    display += 'Addr | Hex  | Dec | Instruction\n';
-    display += '-----|------|-----|-------------\n';
+    display += ' Addr | Hex  |  Dec  | Instruction\n';
+    display += '------|------|-------|-------------\n';
 
     let lastNonZeroIndex = 0;
 
@@ -223,9 +222,9 @@ HLT`;
     const state = this.cpu.getState();
 
     let display = 'SAÍDA:\n';
-    display += output || '(vazio)';
+    display += output || '-|-(vazio)-';
     display += '\n\nENTRADA RESTANTE:\n';
-    display += state.inputBuffer.join('') || '(vazio)';
+    display += state.inputBuffer.join('') || '-|-(vazio)-';
 
     this.saidaElement.textContent = display;
   }
