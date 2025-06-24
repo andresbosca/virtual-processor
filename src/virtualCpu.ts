@@ -15,8 +15,8 @@ interface CPUState {
 }
 
 export class VirtualCPU {
-  private static readonly MEMORY_SIZE = 65536; // 64KB
-  private static readonly ROM_SIZE = 32768; // 32KB ROM
+  public static readonly MEMORY_SIZE = 65536; // 64KB
+  public static readonly ROM_SIZE = 32768; // 32KB ROM
   private static readonly STACK_START = 0xfffe; // Stack starts at top of memory
 
   private registers: number[] = [0, 0, 0, 0]; // R0, R1, R2, R3
@@ -154,7 +154,8 @@ export class VirtualCPU {
         this.executeLoadM(regX, immediate + VirtualCPU.ROM_SIZE);
         break;
       case 0xd: // STOREM [a], Rx
-        this.executeStoreM(regY + VirtualCPU.ROM_SIZE, instruction & 0xf);
+        const test = (instruction >> 4) & 0xff;
+        this.executeStoreM(test + VirtualCPU.ROM_SIZE, instruction & 0xf);
         break;
       case 0xe: // CALL ab
         this.executeCall(address);
@@ -299,9 +300,6 @@ export class VirtualCPU {
     this.validateRegister(regX);
     this.validateMemoryAddress(address);
     if (address < VirtualCPU.ROM_SIZE) {
-      console.log(
-        `Warning: Writing to ROM at address 0x${address.toString(16)}`,
-      );
       throw new Error('Cannot write to ROM');
     }
     this.memory[address] = this.registers[regX];

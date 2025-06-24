@@ -175,13 +175,14 @@ export class Assembler {
             machineInstruction =
               (baseOpcode << 12) | (loadmReg << 8) | (loadmAddr & 0xff);
             break;
-
+          // 1101 00 00 0100 1001
           case 'STOREM': // DaaX - STOREM [a], Rx
             if (parts.length !== 3) {
               throw new Error(`STOREM requires 2 operands: ${line}`);
             }
             const storeAddr = this.parseMemoryAddress(parts[1]);
             const storeReg = this.parseRegister(parts[2]);
+           
             machineInstruction =
               (baseOpcode << 12) | ((storeAddr & 0xff) << 4) | storeReg;
             break;
@@ -210,7 +211,6 @@ export class Assembler {
         }
 
         machineCode.push(machineInstruction);
-
       } catch (error: any) {
         throw new Error(`Error in line "${line}": ${error.message}`);
       }
@@ -277,7 +277,8 @@ export class Assembler {
           line += `LOADM R${regX}, [${immediate}]`;
           break;
         case 0xd: // STOREM
-          line += `STOREM [${regY}], R${instruction & 0xf}`;
+          const test = (instruction >> 4) & 0xff;
+          line += `STOREM [${test}], R${instruction & 0xf}`;
           break;
         case 0xe: // CALL
           line += `CALL ${address}`;

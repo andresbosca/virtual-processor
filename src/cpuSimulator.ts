@@ -10,6 +10,7 @@ export class CPUSimulator {
   private saidaElement: HTMLPreElement;
   private executarButton: HTMLButtonElement;
   private passoButton: HTMLButtonElement;
+  private cycleCount: number = 0;
 
   constructor() {
     this.cpu = new VirtualCPU();
@@ -77,6 +78,7 @@ HLT`;
   private resetCPU(): void {
     this.cpu.reset();
     this.cpu.setInput(this.entradaElement.value);
+    this.cycleCount = 0;
     this.updateDisplay();
   }
 
@@ -104,6 +106,7 @@ HLT`;
       }
 
       const continueExecution = this.cpu.executeStep();
+      this.cycleCount++;
       this.updateDisplay();
 
       if (!continueExecution) {
@@ -117,7 +120,9 @@ HLT`;
   private updateDisplay(): void {
     this.updateRegistradores();
     this.updateMemoria();
+    this.updateMemoriaRAM();
     this.updateSaida();
+    this.updateStatusBar();
   }
 
   private updateRegistradores(): void {
@@ -196,6 +201,28 @@ HLT`;
     this.scrollToCurrentInstruction();
   }
 
+  private updateMemoriaRAM(): void {
+    const ramStart = VirtualCPU.ROM_SIZE; // Início da RAM
+    const ramEnd = VirtualCPU.MEMORY_SIZE; // Fim da memória
+    const memory = this.cpu.getMemory(ramStart, ramEnd - ramStart);
+
+    let display = 'MEMÓRIA (RAM):\n';
+    display += 'Addr | Hex  |  Dec  | Value\n';
+    display += '-----|------|-------|------\n';
+
+    for (let i = 0; i < memory.length; i++) {
+      const addr = (ramStart + i).toString(16).toUpperCase().padStart(4, '0');
+      const hex = memory[i].toString(16).toUpperCase().padStart(4, '0');
+      const dec = memory[i].toString().padStart(5, ' ');
+      display += `${addr} | ${hex} | ${dec} | ${memory[i]}\n`;
+    }
+
+    const memoriaRamElement = document.getElementById('memoria-ram');
+    if (memoriaRamElement) {
+      memoriaRamElement.textContent = display;
+    }
+  }
+
   private scrollToCurrentInstruction(): void {
     const currentPC = this.cpu.getPC();
     const memoriaElement = this.memoriaElement;
@@ -227,5 +254,42 @@ HLT`;
     display += state.inputBuffer.join('') || '-|-(vazio)-';
 
     this.saidaElement.textContent = display;
+  }
+
+  private updateStatusBar(): void {
+    const state = this.cpu.getState();
+
+    // Atualiza o status de execução (Parado ou Executando)
+    const statusIndicator = document.getElementById('status-indicator');
+    const statusText = document.getElementById('status-text');
+    if (statusIndicator && statusText) {
+      if (state.running) {
+        statusIndicator.classList.add('running');
+        statusIndicator.classList.remove('stopped');
+        statusText.textContent = 'Executando';
+      } else {
+        statusIndicator.classList.add('stopped');
+        statusIndicator.classList.remove('running');
+        statusText.textContent = 'Parado';
+      }
+    }
+
+    // Atualiza o valor do PC (Program Counter)
+    const pcDisplay = document.getElementById('pc-display');
+    if (pcDisplay) {
+      pcDisplay.textContent = `0x${state.pc.toString(16).toUpperCase().padStart(4, '0')}`;
+    }
+
+    // Atualiza o contador de instruções
+    const instructionCount = document.getElementById('instruction-count');
+    if (instructionCount) {
+      instructionCount.textContent = `${state.pc}`;
+    }
+
+    // Atualiza o contador de ciclos
+    const cycleCount = document.getElementById('cycle-count');
+    if (cycleCount) {
+      cycleCount.textContent = `${this.cycleCount}`;
+    }
   }
 }

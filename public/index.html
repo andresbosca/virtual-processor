@@ -317,6 +317,39 @@
           font-size: 14px;
         }
       }
+
+      #memoria-ram {
+        max-height: 400px;
+        overflow-y: auto;
+        overflow-x: auto;
+        white-space: pre;
+        font-size: 12px;
+        line-height: 1.2;
+        border: 2px solid #ddd;
+        border-radius: 6px;
+        padding: 12px;
+        background: #1e1e1e;
+        color: #d4d4d4;
+      }
+
+      /* Scrollbar personalizada */
+      #memoria-ram::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      #memoria-ram::-webkit-scrollbar-track {
+        background: #2d2d2d;
+        border-radius: 4px;
+      }
+
+      #memoria-ram::-webkit-scrollbar-thumb {
+        background: #666;
+        border-radius: 4px;
+      }
+
+      #memoria-ram::-webkit-scrollbar-thumb:hover {
+        background: #888;
+      }
     </style>
   </head>
   <body>
@@ -401,9 +434,13 @@
           <pre id="saida"></pre>
         </div>
 
-        <div class="block">
+        <!-- <div class="block">
           <h2>🔧 Código de Máquina</h2>
           <pre id="codigo-maquina"></pre>
+        </div> -->
+        <div class="block">
+          <h2>📂 Memória (RAM)</h2>
+          <pre id="memoria-ram"></pre>
         </div>
       </div>
 
