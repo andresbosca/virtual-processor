@@ -409,11 +409,6 @@
         </div>
 
         <div class="block">
-          <h2>🔢 Registradores & Estado</h2>
-          <pre id="registradores"></pre>
-        </div>
-
-        <div class="block">
           <h2>💾 Memória (ROM)</h2>
           <div style="margin-bottom: 0.5rem">
             <button id="scroll-to-pc" style="font-size: 12px; padding: 4px 8px">
@@ -427,6 +422,11 @@
             </button>
           </div>
           <pre id="memoria"></pre>
+        </div>
+
+        <div class="block">
+          <h2>🔢 Registradores & Estado</h2>
+          <pre id="registradores"></pre>
         </div>
 
         <div class="block">
@@ -541,18 +541,32 @@
               <td>Rx</td>
               <td>-</td>
             </tr>
-            <tr>
+            <tr style="background-color: #e3f2fd">
               <td>CXaa</td>
               <td>LOADM Rx, [a]</td>
-              <td>Carrega valor da memória[a] para Rx</td>
+              <td>Carrega valor da memória[a] para Rx (endereço direto)</td>
               <td>Rx, a (0-255)</td>
               <td>Rx, Flags</td>
             </tr>
-            <tr>
+            <tr style="background-color: #e8f5e8">
+              <td>CX1Y</td>
+              <td>LOADM Rx, [Ry]</td>
+              <td>Carrega valor da memória[Ry] para Rx (endereço indireto)</td>
+              <td>Rx, Ry</td>
+              <td>Rx, Flags</td>
+            </tr>
+            <tr style="background-color: #e3f2fd">
               <td>DaaX</td>
               <td>STOREM [a], Rx</td>
-              <td>Salva Rx na memória[a]</td>
+              <td>Salva Rx na memória[a] (endereço direto)</td>
               <td>a (0-255), Rx</td>
+              <td>-</td>
+            </tr>
+            <tr style="background-color: #e8f5e8">
+              <td>DY1X</td>
+              <td>STOREM [Ry], Rx</td>
+              <td>Salva Rx na memória[Ry] (endereço indireto)</td>
+              <td>Ry, Rx</td>
               <td>-</td>
             </tr>
             <tr>

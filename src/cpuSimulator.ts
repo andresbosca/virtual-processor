@@ -10,6 +10,8 @@ export class CPUSimulator {
   private saidaElement: HTMLPreElement;
   private executarButton: HTMLButtonElement;
   private passoButton: HTMLButtonElement;
+  private resetButton: HTMLButtonElement;
+  private limparSaidaButton: HTMLButtonElement;
   private cycleCount: number = 0;
 
   constructor() {
@@ -30,6 +32,10 @@ export class CPUSimulator {
       'executar',
     ) as HTMLButtonElement;
     this.passoButton = document.getElementById('passo') as HTMLButtonElement;
+    this.resetButton = document.getElementById('reset') as HTMLButtonElement;
+    this.limparSaidaButton = document.getElementById(
+      'limpar-saida',
+    ) as HTMLButtonElement;
 
     this.setupEventListeners();
     this.updateDisplay();
@@ -39,13 +45,13 @@ export class CPUSimulator {
   private setupEventListeners(): void {
     this.executarButton.addEventListener('click', () => this.executar());
     this.passoButton.addEventListener('click', () => this.executarPasso());
+    this.resetButton.addEventListener('click', () => this.resetCPU());
+    this.limparSaidaButton.addEventListener('click', () => this.limparSaida());
 
-    // Update input when user types
     this.entradaElement.addEventListener('input', () => {
       this.cpu.setInput(this.entradaElement.value);
     });
 
-    // Reset and load program when program changes
     this.programElement.addEventListener('input', () => {
       this.resetCPU();
     });
@@ -291,5 +297,10 @@ HLT`;
     if (cycleCount) {
       cycleCount.textContent = `${this.cycleCount}`;
     }
+  }
+
+  private limparSaida(): void {
+    this.cpu.clearOutput();
+    this.updateSaida();
   }
 }

@@ -166,25 +166,62 @@ export class Assembler {
             machineInstruction = (baseOpcode << 12) | (ioReg << 8);
             break;
 
-          case 'LOADM': // CXaa - LOADM Rx, [a]
+          case 'LOADM': // CXaa ou CXYf - LOADM Rx, [a] ou LOADM Rx, [Ry]
             if (parts.length !== 3) {
               throw new Error(`LOADM requires 2 operands: ${line}`);
             }
+
             const loadmReg = this.parseRegister(parts[1]);
-            const loadmAddr = this.parseMemoryAddress(parts[2]);
-            machineInstruction =
-              (baseOpcode << 12) | (loadmReg << 8) | (loadmAddr & 0xff);
+            const loadSource = this.parseOperand(parts[2]);
+
+            if (loadSource.type !== 'memory') {
+              throw new Error(
+                `LOADM second operand must be memory address: ${line}`,
+              );
+            }
+
+            // Verifica se é registrador indireto ([Ry]) ou endereço direto ([a])
+            if (loadSource.value & 0x10) {
+              // Registrador indireto: CXYf onde f=F indica indireto
+              const addrReg = loadSource.value & 0x0f;
+              machineInstruction =
+                (baseOpcode << 12) | (loadmReg << 8) | (addrReg << 4) | 0xf;
+            } else {
+              // Endereço direto: CXaa
+              machineInstruction =
+                (baseOpcode << 12) |
+                (loadmReg << 8) |
+                (loadSource.value & 0xff);
+            }
             break;
-          // 1101 00 00 0100 1001
-          case 'STOREM': // DaaX - STOREM [a], Rx
+
+          case 'STOREM': // DaaX ou DYfX - STOREM [a], Rx ou STOREM [Ry], Rx
             if (parts.length !== 3) {
               throw new Error(`STOREM requires 2 operands: ${line}`);
             }
-            const storeAddr = this.parseMemoryAddress(parts[1]);
+
+            const storeTarget = this.parseOperand(parts[1]);
             const storeReg = this.parseRegister(parts[2]);
-           
-            machineInstruction =
-              (baseOpcode << 12) | ((storeAddr & 0xff) << 4) | storeReg;
+
+            if (storeTarget.type !== 'memory') {
+              throw new Error(
+                `STOREM first operand must be memory address: ${line}`,
+              );
+            }
+
+            // Verifica se é registrador indireto ([Ry]) ou endereço direto ([a])
+            if (storeTarget.value & 0x10) {
+              // Registrador indireto: DYfX onde f=F indica indireto
+              const addrReg = storeTarget.value & 0x0f;
+              machineInstruction =
+                (baseOpcode << 12) | (addrReg << 8) | (0xf << 4) | storeReg;
+            } else {
+              // Endereço direto: DaaX
+              machineInstruction =
+                (baseOpcode << 12) |
+                ((storeTarget.value & 0xff) << 4) |
+                storeReg;
+            }
             break;
 
           case 'CALL': // Eaaa - CALL a
@@ -274,11 +311,31 @@ export class Assembler {
           line += `OUT R${regX}`;
           break;
         case 0xc: // LOADM
-          line += `LOADM R${regX}, [${immediate}]`;
+          const loadIsRegisterIndirect = (instruction & 0xf) === 0xf;
+
+          if (loadIsRegisterIndirect) {
+            // Formato registrador indireto CXYf
+            const addrReg = (instruction >> 4) & 0xf;
+            line += `LOADM R${regX}, [R${addrReg}]`;
+          } else {
+            // Formato endereço direto CXaa
+            line += `LOADM R${regX}, [${immediate}]`;
+          }
           break;
         case 0xd: // STOREM
-          const test = (instruction >> 4) & 0xff;
-          line += `STOREM [${test}], R${instruction & 0xf}`;
+          const storeIsRegisterIndirect = ((instruction >> 4) & 0xf) === 0xf;
+
+          if (storeIsRegisterIndirect) {
+            // Formato registrador indireto DYfX
+            const addrReg = (instruction >> 8) & 0xf;
+            const regField = instruction & 0xf;
+            line += `STOREM [R${addrReg}], R${regField}`;
+          } else {
+            // Formato endereço direto DaaX
+            const addrField = (instruction >> 4) & 0xff;
+            const regField = instruction & 0xf;
+            line += `STOREM [${addrField}], R${regField}`;
+          }
           break;
         case 0xe: // CALL
           line += `CALL ${address}`;
@@ -300,5 +357,35 @@ export class Assembler {
     }
 
     return result.join('\n');
+  }
+
+  private static parseOperand(operand: string): {
+    type: 'register' | 'immediate' | 'memory';
+    value: number;
+  } {
+    // Remove espaços
+    operand = operand.trim();
+
+    // Verifica se é um endereço de memória [...]
+    if (operand.startsWith('[') && operand.endsWith(']')) {
+      const inner = operand.slice(1, -1).trim();
+
+      // Verifica se o conteúdo dentro dos colchetes é um registrador
+      const regMatch = inner.match(/^R([0-3])$/i);
+      if (regMatch) {
+        return { type: 'memory', value: parseInt(regMatch[1]) | 0x10 }; // Flag para indicar registrador
+      } else {
+        return { type: 'memory', value: this.parseNumber(inner) };
+      }
+    }
+
+    // Verifica se é um registrador
+    const regMatch = operand.match(/^R([0-3])$/i);
+    if (regMatch) {
+      return { type: 'register', value: parseInt(regMatch[1]) };
+    }
+
+    // É um valor imediato
+    return { type: 'immediate', value: this.parseNumber(operand) };
   }
 }

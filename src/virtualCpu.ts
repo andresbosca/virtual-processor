@@ -150,12 +150,33 @@ export class VirtualCPU {
       case 0xb: // OUT Rx
         this.executeOut(regX);
         break;
-      case 0xc: // LOADM Rx, [a]
-        this.executeLoadM(regX, immediate + VirtualCPU.ROM_SIZE);
+      case 0xc: // LOADM Rx, [a] ou LOADM Rx, [Ry]
+        const loadIsRegisterIndirect = (instruction & 0xf) === 0xf;
+
+        if (loadIsRegisterIndirect) {
+          // Formato registrador indireto: LOADM Rx, [Ry]
+          const addrReg = (instruction >> 4) & 0xf;
+          this.executeLoadMIndirect(regX, addrReg);
+        } else {
+          // Formato endereço direto: LOADM Rx, [a]
+          this.executeLoadM(regX, immediate + VirtualCPU.ROM_SIZE);
+        }
         break;
-      case 0xd: // STOREM [a], Rx
-        const test = (instruction >> 4) & 0xff;
-        this.executeStoreM(test + VirtualCPU.ROM_SIZE, instruction & 0xf);
+
+      case 0xd: // STOREM [a], Rx ou STOREM [Ry], Rx
+        const storeIsRegisterIndirect = ((instruction >> 4) & 0xf) === 0xf;
+
+        if (storeIsRegisterIndirect) {
+          // Formato registrador indireto: STOREM [Ry], Rx
+          const addrReg = (instruction >> 8) & 0xf;
+          const storeReg = instruction & 0xf;
+          this.executeStoreMIndirect(addrReg, storeReg);
+        } else {
+          // Formato endereço direto: STOREM [a], Rx
+          const address = (instruction >> 4) & 0xff;
+          const storeReg = instruction & 0xf;
+          this.executeStoreM(address + VirtualCPU.ROM_SIZE, storeReg);
+        }
         break;
       case 0xe: // CALL ab
         this.executeCall(address);
@@ -296,6 +317,17 @@ export class VirtualCPU {
     this.updateFlags(this.registers[regX]);
   }
 
+  private executeLoadMIndirect(loadReg: number, addrReg: number): void {
+    this.validateRegister(loadReg);
+    this.validateRegister(addrReg);
+
+    const address = this.registers[addrReg] + VirtualCPU.ROM_SIZE;
+    this.validateMemoryAddress(address);
+
+    this.registers[loadReg] = this.memory[address];
+    this.updateFlags(this.registers[loadReg]);
+  }
+
   private executeStoreM(address: number, regX: number): void {
     this.validateRegister(regX);
     this.validateMemoryAddress(address);
@@ -303,6 +335,20 @@ export class VirtualCPU {
       throw new Error('Cannot write to ROM');
     }
     this.memory[address] = this.registers[regX];
+  }
+
+  private executeStoreMIndirect(addrReg: number, storeReg: number): void {
+    this.validateRegister(addrReg);
+    this.validateRegister(storeReg);
+
+    const address = this.registers[addrReg] + VirtualCPU.ROM_SIZE;
+    this.validateMemoryAddress(address);
+
+    if (address < VirtualCPU.ROM_SIZE) {
+      throw new Error('Cannot write to ROM');
+    }
+
+    this.memory[address] = this.registers[storeReg];
   }
 
   private executeCall(address: number): void {
